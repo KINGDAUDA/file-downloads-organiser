@@ -11,9 +11,30 @@ CATEGORIES = {
     "Executables": [".exe", ".msi", ".dmg", ".pkg", ".deb"],
 }
 
-# Add any active log or temporary extension here
+# Ignore extensions of active/incomplete downloads
 IGNORE_EXTENSIONS = {".crdownload", ".part", ".tmp"}
-IGNORE_FILENAMES = {"log.txt"}  # Explicitly ignore Telegram's active log file
+
+# Ignore specific critical or locked application files
+IGNORE_FILENAMES = {
+    "log.txt",
+    "telegram.exe",
+    "updater.exe",
+    "unins000.exe",
+    "unins000.dat",
+}
+
+# Ignore system/app folders and our own target category folders
+IGNORE_FOLDERS = {
+    "tdata",
+    "images",
+    "documents",
+    "archives",
+    "audio",
+    "video",
+    "code_and_data",
+    "executables",
+    "others",
+}
 
 
 def organize_downloads(downloads_path: Path):
@@ -28,9 +49,15 @@ def organize_downloads(downloads_path: Path):
     }
 
     for item in downloads_path.iterdir():
-        # Skip subdirectories, hidden files, and active log files
+        # 1. Skip protected folders
+        if item.is_dir() and item.name.lower() in IGNORE_FOLDERS:
+            continue
+
+        # 2. Skip all other directories and hidden files
         if not item.is_file() or item.name.startswith("."):
             continue
+
+        # 3. Skip ignored files and active downloads
         if item.name.lower() in IGNORE_FILENAMES:
             continue
 
@@ -44,6 +71,7 @@ def organize_downloads(downloads_path: Path):
 
         destination = target_dir / item.name
 
+        # Prevent overwriting
         if destination.exists():
             stem = item.stem
             counter = 1
@@ -51,6 +79,7 @@ def organize_downloads(downloads_path: Path):
                 destination = target_dir / f"{stem}_{counter}{ext}"
                 counter += 1
 
+        # Safe move
         try:
             shutil.move(str(item), str(destination))
             print(f"Moved: {item.name} -> {target_folder_name}/")
